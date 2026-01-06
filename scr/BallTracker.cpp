@@ -63,12 +63,13 @@ bool BallTracker::isBlackOrGray(const cv::Rect& bbox, const cv::Mat& frame) {
     float avg_saturation = static_cast<float>(mean_sat[0]);
     float avg_value = static_cast<float>(mean_val[0]);
     
-    // Nếu saturation thấp (< 30) và value thấp (< 100) thì là đen/xám
-    // Hoặc nếu value rất thấp (< 50) thì là đen
-    if (avg_saturation < 30.0f && avg_value < 100.0f) {
+    // Nới lỏng filter để chấp nhận bóng mờ: giảm threshold
+    // Nếu saturation thấp (< 20) và value thấp (< 70) thì là đen/xám
+    // Hoặc nếu value rất thấp (< 35) thì là đen
+    if (avg_saturation < 20.0f && avg_value < 70.0f) {
         return true; // Màu xám (không có màu sắc rõ ràng và tối)
     }
-    if (avg_value < 50.0f) {
+    if (avg_value < 35.0f) {
         return true; // Màu đen (rất tối)
     }
     
@@ -89,7 +90,7 @@ bool BallTracker::update(const std::vector<cv::Rect>& detections, cv::Mat& frame
         
         int matched_id = -1;
         float min_dist = 10000.0f;
-        float dist_threshold = 150.0f;
+        float dist_threshold = 250.0f; // Tăng từ 150 lên 250 để match bóng di chuyển xa hơn
         
         for (auto& [id, obj] : tracking_objects) {
             float dist = cv::norm(center - obj.pos);
@@ -108,7 +109,7 @@ bool BallTracker::update(const std::vector<cv::Rect>& detections, cv::Mat& frame
         } else {
             // Kiểm tra chuyển động: nếu di chuyển quá ít thì coi như nhiễu, không cập nhật
             float move_dist = cv::norm(center - tracking_objects[matched_id].pos);
-            float min_move_threshold = 5.0f; // Ngưỡng tối thiểu để coi là chuyển động (pixels)
+            float min_move_threshold = 2.0f; // Giảm từ 5.0 xuống 2.0 để chấp nhận bóng di chuyển ít hơn (pixels)
             
             if (move_dist >= min_move_threshold) {
                 tracking_objects[matched_id].total_dist += move_dist;
@@ -138,8 +139,8 @@ bool BallTracker::update(const std::vector<cv::Rect>& detections, cv::Mat& frame
         
         if (!found) {
             it->second.miss_count++;
-            // Loại bỏ nhanh hơn nếu object không chuyển động (miss_count cao từ trước)
-            int max_miss = (it->second.total_dist < 20.0f) ? 5 : 10; // Object ít di chuyển thì loại bỏ sớm hơn
+            // Tăng max_miss để chấp nhận mất bóng vài frame (bóng mờ)
+            int max_miss = (it->second.total_dist < 20.0f) ? 8 : 15; // Tăng từ 5/10 lên 8/15
             if (it->second.miss_count > max_miss) {
                 it = tracking_objects.erase(it);
             } else {
@@ -153,7 +154,7 @@ bool BallTracker::update(const std::vector<cv::Rect>& detections, cv::Mat& frame
     // Tìm Main Ball: Kết hợp total_dist và brightness (filter shadow)
     int main_id = -1;
     float max_score = 0;
-    float min_brightness_threshold = 80.0f; // Ngưỡng tối thiểu để loại bỏ shadow (0-255)
+    float min_brightness_threshold = 50.0f; // Giảm từ 80 xuống 50 để chấp nhận bóng mờ hơn (0-255)
     
     for (auto& [id, obj] : tracking_objects) {
         // Loại bỏ object quá tối (shadow)
@@ -174,7 +175,7 @@ bool BallTracker::update(const std::vector<cv::Rect>& detections, cv::Mat& frame
     
     // Kiểm tra total_dist của main ball (không dùng max_score vì đã có brightness factor)
     float main_total_dist = (main_id != -1) ? tracking_objects[main_id].total_dist : 0.0f;
-    if (main_id != -1 && main_total_dist > 50) {
+    if (main_id != -1 && main_total_dist > 30) { // Giảm từ 50 xuống 30 để chấp nhận bóng mới nhanh hơn
         TrackedObj& mainBall = tracking_objects[main_id];
         last_ball_size = mainBall.bbox.size();
         
