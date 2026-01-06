@@ -28,11 +28,63 @@ float BallTracker::computeBrightness(const cv::Rect& bbox, const cv::Mat& frame)
     return static_cast<float>(mean_val[0]);
 }
 
+// Helper function: Kiểm tra xem bbox có phải màu đen/xám không
+bool BallTracker::isBlackOrGray(const cv::Rect& bbox, const cv::Mat& frame) {
+    // Đảm bảo bbox nằm trong frame
+    cv::Rect valid_bbox = bbox & cv::Rect(0, 0, frame.cols, frame.rows);
+    if (valid_bbox.width <= 0 || valid_bbox.height <= 0) {
+        return true; // Coi như không hợp lệ
+    }
+    
+    // Lấy ROI
+    cv::Mat roi = frame(valid_bbox);
+    
+    // Convert sang HSV để kiểm tra saturation (màu sắc)
+    cv::Mat hsv;
+    if (roi.channels() == 3) {
+        cv::cvtColor(roi, hsv, cv::COLOR_BGR2HSV);
+    } else {
+        // Nếu đã là grayscale thì chuyển sang BGR rồi HSV
+        cv::Mat bgr;
+        cv::cvtColor(roi, bgr, cv::COLOR_GRAY2BGR);
+        cv::cvtColor(bgr, hsv, cv::COLOR_BGR2HSV);
+    }
+    
+    // Tách các channel
+    std::vector<cv::Mat> channels;
+    cv::split(hsv, channels);
+    cv::Mat saturation = channels[1]; // S channel (0-255)
+    cv::Mat value = channels[2];        // V channel (brightness, 0-255)
+    
+    // Tính mean saturation và value
+    cv::Scalar mean_sat = cv::mean(saturation);
+    cv::Scalar mean_val = cv::mean(value);
+    
+    float avg_saturation = static_cast<float>(mean_sat[0]);
+    float avg_value = static_cast<float>(mean_val[0]);
+    
+    // Nếu saturation thấp (< 30) và value thấp (< 100) thì là đen/xám
+    // Hoặc nếu value rất thấp (< 50) thì là đen
+    if (avg_saturation < 30.0f && avg_value < 100.0f) {
+        return true; // Màu xám (không có màu sắc rõ ràng và tối)
+    }
+    if (avg_value < 50.0f) {
+        return true; // Màu đen (rất tối)
+    }
+    
+    return false; // Có màu sắc, không phải đen/xám
+}
+
 bool BallTracker::update(const std::vector<cv::Rect>& detections, cv::Mat& frame, cv::Point2f& outCenter) {
     // 1. Map detections với tracking objects hiện có (Hungarian lite)
     std::vector<int> used_ids;
     
     for (const auto& box : detections) {
+        // Filter ngay từ đầu: bỏ qua detection màu đen/xám
+        if (isBlackOrGray(box, frame)) {
+            continue; // Bỏ qua detection này
+        }
+        
         cv::Point2f center(box.x + box.width/2.0f, box.y + box.height/2.0f);
         
         int matched_id = -1;

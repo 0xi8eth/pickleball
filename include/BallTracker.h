@@ -39,6 +39,9 @@ private:
     
     // Helper function: Tính độ sáng trung bình trong bbox để filter shadow
     float computeBrightness(const cv::Rect& bbox, const cv::Mat& frame);
+    
+    // Helper function: Kiểm tra xem bbox có phải màu đen/xám không
+    bool isBlackOrGray(const cv::Rect& bbox, const cv::Mat& frame);
 };
 
 #endif
