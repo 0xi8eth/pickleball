@@ -4,7 +4,6 @@
 #include <opencv2/opencv.hpp>
 #include <vector>
 #include <map>
-#include "KalmanFilter.h"
 
 struct TrackedObj {
     cv::Point2f pos;
@@ -31,7 +30,6 @@ private:
     
     // History vị trí để tính góc nảy (tương tự ball_positions trong Python)
     std::vector<cv::Point2f> position_history;
-    KalmanWrapper kalman;
     bool bounce_flag = false;
     cv::Size last_ball_size = cv::Size(0,0);
     cv::Point2f bounce_point = cv::Point2f(-1, -1); // Lưu điểm bounce để vẽ lại
