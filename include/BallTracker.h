@@ -33,6 +33,8 @@ private:
     KalmanWrapper kalman;
     bool bounce_flag = false;
     cv::Size last_ball_size = cv::Size(0,0);
+    cv::Point2f bounce_point = cv::Point2f(-1, -1); // Lưu điểm bounce để vẽ lại
+    bool has_bounce_point = false;
 };
 
 #endif

@@ -27,12 +27,26 @@ bool BallTracker::update(const std::vector<cv::Rect>& detections, cv::Mat& frame
             matched_id = next_id++;
             tracking_objects[matched_id] = {center, box, 0, 0.0f};
         } else {
-            tracking_objects[matched_id].total_dist += cv::norm(center - tracking_objects[matched_id].pos);
-            tracking_objects[matched_id].pos = center;
-            tracking_objects[matched_id].bbox = box;
-            tracking_objects[matched_id].miss_count = 0;
+            // Kiểm tra chuyển động: nếu di chuyển quá ít thì coi như nhiễu, không cập nhật
+            float move_dist = cv::norm(center - tracking_objects[matched_id].pos);
+            float min_move_threshold = 5.0f; // Ngưỡng tối thiểu để coi là chuyển động (pixels)
+            
+            if (move_dist >= min_move_threshold) {
+                tracking_objects[matched_id].total_dist += move_dist;
+                tracking_objects[matched_id].pos = center;
+                tracking_objects[matched_id].bbox = box;
+                tracking_objects[matched_id].miss_count = 0;
+            } else {
+                // Bóng không chuyển động, không cập nhật vị trí (coi như nhiễu)
+                // Tăng miss_count để logic remove lost objects loại bỏ sớm hơn
+                tracking_objects[matched_id].miss_count++;
+                // Không thêm vào used_ids để logic remove lost objects xử lý
+                matched_id = -1;
+            }
         }
-        used_ids.push_back(matched_id);
+        if (matched_id != -1) {
+            used_ids.push_back(matched_id);
+        }
     }
     
     // Remove lost objects
@@ -42,7 +56,9 @@ bool BallTracker::update(const std::vector<cv::Rect>& detections, cv::Mat& frame
         
         if (!found) {
             it->second.miss_count++;
-            if (it->second.miss_count > 10) {
+            // Loại bỏ nhanh hơn nếu object không chuyển động (miss_count cao từ trước)
+            int max_miss = (it->second.total_dist < 20.0f) ? 5 : 10; // Object ít di chuyển thì loại bỏ sớm hơn
+            if (it->second.miss_count > max_miss) {
                 it = tracking_objects.erase(it);
             } else {
                 ++it;
@@ -88,6 +104,12 @@ bool BallTracker::update(const std::vector<cv::Rect>& detections, cv::Mat& frame
             cv::circle(frame, p, 4, cv::Scalar(0,255,0), -1);
         }
         cv::rectangle(frame, mainBall.bbox, cv::Scalar(255,255,255), 2);
+        
+        // Vẽ lại điểm bounce nếu có
+        if (has_bounce_point && bounce_point.x >= 0 && bounce_point.y >= 0) {
+            cv::circle(frame, bounce_point, 10, cv::Scalar(0,0,255), -1); // Điểm đỏ lớn hơn
+            cv::circle(frame, bounce_point, 12, cv::Scalar(0,0,255), 2); // Viền đỏ
+        }
         
         return true;
     } else {
@@ -137,7 +159,13 @@ void BallTracker::processBounce(cv::Mat& frame, cv::Point2f currentPos, cv::Poin
                  // Dịch xuống đáy bóng
                  inter.y += last_ball_size.height / 2.0f;
                  
-                 cv::circle(frame, inter, 8, cv::Scalar(0,0,255), -1);
+                 // Lưu điểm bounce để vẽ lại ở các frame sau
+                 bounce_point = inter;
+                 has_bounce_point = true;
+                 
+                 // Vẽ điểm bounce đỏ rõ ràng
+                 cv::circle(frame, inter, 10, cv::Scalar(0,0,255), -1); // Điểm đỏ lớn
+                 cv::circle(frame, inter, 12, cv::Scalar(0,0,255), 2); // Viền đỏ
                  
                  // CHECK IN/OUT
                  std::string result = Utils::checkOutIn(linePt1, linePt2, outRefPoint, inter);
