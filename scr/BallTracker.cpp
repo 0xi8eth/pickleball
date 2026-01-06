@@ -107,40 +107,42 @@ bool BallTracker::update(const std::vector<cv::Rect>& detections, cv::Mat& frame
         float brightness = computeBrightness(box, frame);
         
         if (matched_id == -1) {
-            // Detection mới: Kiểm tra xem có chuyển động so với frame trước không
-            bool has_movement = false;
-            float min_move_threshold_new = 2.0f; // Ngưỡng tối thiểu để coi là chuyển động
+            // Detection mới: Kiểm tra xem có trùng trong 3 frame liên tiếp không
+            float overlap_threshold = 30.0f; // Ngưỡng khoảng cách để coi là trùng (pixels)
+            bool is_stationary = false;
             
-            if (prev_frame_centers.size() > 0) {
-                // Tìm detection gần nhất trong frame trước
-                float min_prev_dist = 10000.0f;
-                for (const auto& prev_center : prev_frame_centers) {
+            // Kiểm tra nếu có đủ 2 frame trước
+            if (prev_frame_centers_1.size() > 0 && prev_frame_centers_2.size() > 0) {
+                // Tìm detection gần nhất trong frame n-1
+                float min_dist_1 = 10000.0f;
+                for (const auto& prev_center : prev_frame_centers_1) {
                     float dist = cv::norm(center - prev_center);
-                    if (dist < min_prev_dist) {
-                        min_prev_dist = dist;
+                    if (dist < min_dist_1) {
+                        min_dist_1 = dist;
                     }
                 }
                 
-                // Nếu có detection gần trong frame trước và di chuyển đủ xa -> có chuyển động
-                // Nếu không có detection gần (< 50 pixels) -> có thể là bóng mới xuất hiện
-                if (min_prev_dist < 50.0f) {
-                    // Có detection gần -> phải di chuyển đủ xa mới coi là chuyển động
-                    has_movement = (min_prev_dist >= min_move_threshold_new);
-                } else {
-                    // Không có detection gần -> có thể là bóng mới, cho phép tạo tracking object
-                    has_movement = true;
+                // Tìm detection gần nhất trong frame n-2
+                float min_dist_2 = 10000.0f;
+                for (const auto& prev_center : prev_frame_centers_2) {
+                    float dist = cv::norm(center - prev_center);
+                    if (dist < min_dist_2) {
+                        min_dist_2 = dist;
+                    }
                 }
-            } else {
-                // Frame đầu tiên hoặc không có frame trước -> cho phép tạo
-                has_movement = true;
+                
+                // Nếu có detection gần trong cả 2 frame trước -> 3 frame trùng nhau -> không chuyển động
+                if (min_dist_1 < overlap_threshold && min_dist_2 < overlap_threshold) {
+                    is_stationary = true;
+                }
             }
             
-            // Chỉ tạo tracking object nếu có chuyển động hoặc là frame đầu
-            if (has_movement) {
+            // Chỉ tạo tracking object nếu không phải đứng yên (3 frame trùng)
+            if (!is_stationary) {
                 matched_id = next_id++;
                 tracking_objects[matched_id] = {center, box, 0, 0.0f, brightness};
             } else {
-                // Detection mới nhưng không chuyển động -> bỏ qua (nhiễu đứng yên)
+                // Detection mới nhưng trùng trong 3 frame -> bỏ qua (nhiễu đứng yên)
                 continue;
             }
         } else {
@@ -170,8 +172,9 @@ bool BallTracker::update(const std::vector<cv::Rect>& detections, cv::Mat& frame
         }
     }
     
-    // Cập nhật prev_frame_centers cho frame sau
-    prev_frame_centers = current_frame_centers;
+    // Cập nhật lịch sử 2 frame: shift frame n-1 -> n-2, frame hiện tại -> n-1
+    prev_frame_centers_2 = prev_frame_centers_1;
+    prev_frame_centers_1 = current_frame_centers;
     
     // Remove lost objects
     for (auto it = tracking_objects.begin(); it != tracking_objects.end();) {
