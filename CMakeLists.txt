@@ -15,14 +15,14 @@ include_directories(
 )
 
 # Source files
-# Liệt kê các file .cpp nằm trong thư mục src/
+# Liệt kê các file .cpp nằm trong thư mục scr/
 set(SOURCES
-    src/main.cpp
-    src/Utils.cpp
-    src/KalmanFilter.cpp
-    src/BallTracker.cpp
-    src/YoloDetector.cpp
-    src/LineDetector.cpp
+    scr/main.cpp
+    scr/Utils.cpp
+    scr/KalmanFilter.cpp
+    scr/BallTracker.cpp
+    scr/YoloDetector.cpp
+    scr/LineDetector.cpp
 )
 
 # Header files
