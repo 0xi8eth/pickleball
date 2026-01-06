@@ -4,13 +4,14 @@
 #include <opencv2/opencv.hpp>
 #include <vector>
 #include <map>
-#include "KalmanWrapper.h"
+#include "KalmanFilter.h"
 
 struct TrackedObj {
     cv::Point2f pos;
     cv::Rect bbox;
     int miss_count;
     float total_dist;
+    float avg_brightness; // Độ sáng trung bình để filter shadow
 };
 
 class BallTracker {
@@ -35,6 +36,9 @@ private:
     cv::Size last_ball_size = cv::Size(0,0);
     cv::Point2f bounce_point = cv::Point2f(-1, -1); // Lưu điểm bounce để vẽ lại
     bool has_bounce_point = false;
+    
+    // Helper function: Tính độ sáng trung bình trong bbox để filter shadow
+    float computeBrightness(const cv::Rect& bbox, const cv::Mat& frame);
 };
 
 #endif
