@@ -30,6 +30,8 @@ private:
     
     // History vị trí để tính góc nảy (tương tự ball_positions trong Python)
     std::vector<cv::Point2f> position_history;
+    // Lưu centers của detections frame trước để kiểm tra chuyển động detection mới
+    std::vector<cv::Point2f> prev_frame_centers;
     bool bounce_flag = false;
     cv::Size last_ball_size = cv::Size(0,0);
     cv::Point2f bounce_point = cv::Point2f(-1, -1); // Lưu điểm bounce để vẽ lại

@@ -80,6 +80,9 @@ bool BallTracker::update(const std::vector<cv::Rect>& detections, cv::Mat& frame
     // 1. Map detections với tracking objects hiện có (Hungarian lite)
     std::vector<int> used_ids;
     
+    // Lưu centers của frame hiện tại để dùng cho frame sau
+    std::vector<cv::Point2f> current_frame_centers;
+    
     for (const auto& box : detections) {
         // Filter ngay từ đầu: bỏ qua detection màu đen/xám
         if (isBlackOrGray(box, frame)) {
@@ -104,8 +107,42 @@ bool BallTracker::update(const std::vector<cv::Rect>& detections, cv::Mat& frame
         float brightness = computeBrightness(box, frame);
         
         if (matched_id == -1) {
-            matched_id = next_id++;
-            tracking_objects[matched_id] = {center, box, 0, 0.0f, brightness};
+            // Detection mới: Kiểm tra xem có chuyển động so với frame trước không
+            bool has_movement = false;
+            float min_move_threshold_new = 2.0f; // Ngưỡng tối thiểu để coi là chuyển động
+            
+            if (prev_frame_centers.size() > 0) {
+                // Tìm detection gần nhất trong frame trước
+                float min_prev_dist = 10000.0f;
+                for (const auto& prev_center : prev_frame_centers) {
+                    float dist = cv::norm(center - prev_center);
+                    if (dist < min_prev_dist) {
+                        min_prev_dist = dist;
+                    }
+                }
+                
+                // Nếu có detection gần trong frame trước và di chuyển đủ xa -> có chuyển động
+                // Nếu không có detection gần (< 50 pixels) -> có thể là bóng mới xuất hiện
+                if (min_prev_dist < 50.0f) {
+                    // Có detection gần -> phải di chuyển đủ xa mới coi là chuyển động
+                    has_movement = (min_prev_dist >= min_move_threshold_new);
+                } else {
+                    // Không có detection gần -> có thể là bóng mới, cho phép tạo tracking object
+                    has_movement = true;
+                }
+            } else {
+                // Frame đầu tiên hoặc không có frame trước -> cho phép tạo
+                has_movement = true;
+            }
+            
+            // Chỉ tạo tracking object nếu có chuyển động hoặc là frame đầu
+            if (has_movement) {
+                matched_id = next_id++;
+                tracking_objects[matched_id] = {center, box, 0, 0.0f, brightness};
+            } else {
+                // Detection mới nhưng không chuyển động -> bỏ qua (nhiễu đứng yên)
+                continue;
+            }
         } else {
             // Kiểm tra chuyển động: nếu di chuyển quá ít thì coi như nhiễu, không cập nhật
             float move_dist = cv::norm(center - tracking_objects[matched_id].pos);
@@ -129,8 +166,12 @@ bool BallTracker::update(const std::vector<cv::Rect>& detections, cv::Mat& frame
         }
         if (matched_id != -1) {
             used_ids.push_back(matched_id);
+            current_frame_centers.push_back(center); // Lưu center để dùng cho frame sau
         }
     }
+    
+    // Cập nhật prev_frame_centers cho frame sau
+    prev_frame_centers = current_frame_centers;
     
     // Remove lost objects
     for (auto it = tracking_objects.begin(); it != tracking_objects.end();) {
