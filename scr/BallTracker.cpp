@@ -196,11 +196,20 @@ bool BallTracker::update(const std::vector<cv::Rect>& detections, cv::Mat& frame
     }
     
     // Tìm Main Ball: Kết hợp total_dist và brightness (filter shadow)
+    // Chỉ xét các bóng đã được cập nhật trong frame hiện tại (có trong used_ids)
+    // Loại bỏ bóng đứng yên khỏi việc chọn main ball
     int main_id = -1;
     float max_score = 0;
     float min_brightness_threshold = 50.0f; // Giảm từ 80 xuống 50 để chấp nhận bóng mờ hơn (0-255)
     
-    for (auto& [id, obj] : tracking_objects) {
+    for (int id : used_ids) {
+        // Chỉ xét bóng có trong used_ids (đã được cập nhật, có chuyển động)
+        if (tracking_objects.find(id) == tracking_objects.end()) {
+            continue;
+        }
+        
+        TrackedObj& obj = tracking_objects[id];
+        
         // Loại bỏ object quá tối (shadow)
         if (obj.avg_brightness < min_brightness_threshold) {
             continue;

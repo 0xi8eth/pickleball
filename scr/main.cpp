@@ -71,9 +71,7 @@ int main() {
 
         writer.write(frame);
         
-        // Show (Optional on server)
-        // cv::imshow("Tennis", frame);
-        // if (cv::waitKey(1) == 27) break;
+        
     }
 
     cap.release();
