@@ -232,7 +232,7 @@ void BallTracker::processBounce(cv::Mat& frame, cv::Point2f currentPos, cv::Poin
     // Lấy 3 điểm cuối
     cv::Point2f p0 = position_history[position_history.size()-3];
     cv::Point2f p1 = position_history[position_history.size()-2];
-    cv::Point2f p2 = position_history[position_history.size()-1]; // current
+    cv::Point2f p2 = currentPos; // Dùng vị trí thực tế của bóng thay vì predicted
     
     float angle = Utils::computeAngle(p0, p1, p2);
     
