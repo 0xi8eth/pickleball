@@ -181,16 +181,17 @@ bool BallTracker::update(const std::vector<cv::Rect>& detections, cv::Mat& frame
         // Kalman
         cv::Point2f predicted = kalman.update(mainBall.pos.x, mainBall.pos.y);
         
-        // Kiểm tra nhảy vị trí bất thường (validation logic)
+        // Kiểm tra nhảy vị trí bất thường (validation logic) - so sánh với vị trí thực tế
         if (position_history.size() > 0) {
-             float d = cv::norm(predicted - position_history.back());
+             float d = cv::norm(mainBall.pos - position_history.back());
              if (d > 400) { // New ball detected far away
                  kalman.reset();
                  position_history.clear();
              }
         }
 
-        position_history.push_back(predicted);
+        // Lưu vị trí thực tế (trung tâm bbox) vào history thay vì predicted
+        position_history.push_back(mainBall.pos);
         if (position_history.size() > 5) position_history.erase(position_history.begin());
         
         outCenter = predicted;
@@ -215,9 +216,8 @@ bool BallTracker::update(const std::vector<cv::Rect>& detections, cv::Mat& frame
              outCenter = predicted;
              cv::putText(frame, "PREDICTING", cv::Point(50,50), cv::FONT_HERSHEY_SIMPLEX, 0.7, cv::Scalar(0,255,255), 2);
              
-             // Có thể thêm predict vào history để tính bounce
-             position_history.push_back(predicted);
-             if (position_history.size() > 5) position_history.erase(position_history.begin());
+             // Không thêm predicted vào history vì không có vị trí thực tế
+             // History chỉ lưu vị trí thực tế từ detection
              
              return true;
         }
