@@ -47,9 +47,15 @@ int main() {
         // Detect Ball
         auto detections = detector.detect(frame);
         
+        // Convert Detection to cv::Rect for tracker
+        std::vector<cv::Rect> detectionBoxes;
+        for (const auto& det : detections) {
+            detectionBoxes.push_back(det.box);
+        }
+        
         // Tracking & Logic
         cv::Point2f ballCenter;
-        if (tracker.update(detections, frame, ballCenter)) {
+        if (tracker.update(detectionBoxes, frame, ballCenter)) {
             // Nếu có bóng và có line -> Check Bounce
             if (lineFound) {
                 tracker.processBounce(frame, ballCenter, selectedLine.pt1, selectedLine.pt2, outRefPoint);
