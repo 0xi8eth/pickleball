@@ -7,6 +7,7 @@
 
 int main() {
     // 1. Setup
+    // cv::VideoCapture cap(0); // Camera input (uncomment when needed)
     cv::VideoCapture cap(Config::SOURCE_VIDEO_PATH);
     if (!cap.isOpened()) {
         std::cerr << "Cannot open video" << std::endl;
