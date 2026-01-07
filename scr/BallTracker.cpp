@@ -255,8 +255,8 @@ bool BallTracker::update(const std::vector<cv::Rect>& detections, cv::Mat& frame
         
         // Vẽ lại điểm bounce nếu có
         if (has_bounce_point && bounce_point.x >= 0 && bounce_point.y >= 0) {
-            cv::circle(frame, bounce_point, 10, cv::Scalar(0,0,255), -1); // Điểm đỏ lớn hơn
-            cv::circle(frame, bounce_point, 12, cv::Scalar(0,0,255), 2); // Viền đỏ
+            cv::circle(frame, bounce_point, 7, cv::Scalar(0,0,255), -1); // Điểm đỏ
+            cv::circle(frame, bounce_point, 9, cv::Scalar(0,0,255), 2); // Viền đỏ
         }
         
         return true;
@@ -299,8 +299,8 @@ void BallTracker::processBounce(cv::Mat& frame, cv::Point2f currentPos, cv::Poin
                  has_bounce_point = true;
                  
                  // Vẽ điểm bounce đỏ rõ ràng
-                 cv::circle(frame, inter, 10, cv::Scalar(0,0,255), -1); // Điểm đỏ lớn
-                 cv::circle(frame, inter, 12, cv::Scalar(0,0,255), 2); // Viền đỏ
+                 cv::circle(frame, inter, 7, cv::Scalar(0,0,255), -1); // Điểm đỏ
+                 cv::circle(frame, inter, 9, cv::Scalar(0,0,255), 2); // Viền đỏ
                  
                  // CHECK IN/OUT
                  std::string result = Utils::checkOutIn(linePt1, linePt2, outRefPoint, inter);
