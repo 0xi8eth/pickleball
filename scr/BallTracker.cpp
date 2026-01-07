@@ -300,7 +300,7 @@ void BallTracker::processBounce(cv::Mat& frame, cv::Point2f currentPos, cv::Poin
                  
                  // Vẽ điểm bounce đỏ rõ ràng
                  cv::circle(frame, inter, 7, cv::Scalar(0,0,255), -1); // Điểm đỏ
-                 cv::circle(frame, inter, 9, cv::Scalar(0,0,255), 2); // Viền đỏ
+                 
                  
                  // CHECK IN/OUT
                  std::string result = Utils::checkOutIn(linePt1, linePt2, outRefPoint, inter);
