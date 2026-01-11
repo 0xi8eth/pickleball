@@ -48,7 +48,7 @@ cd ..
 
 ### 2. Clone Repository
 ```bash
-git clone <repository-url>
+git clone [<repository-url>](https://github.com/0xi8eth/pickleball.git)
 cd pickleball
 ```
 
